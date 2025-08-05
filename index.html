@@ -15,13 +15,20 @@
           crossorigin=""></script>
 
   <style>
-    /* Make the map fill most of the viewport */
-    body { margin: 0; padding: 0; }
-    #map       { height: 80vh; width: 100%; }
+    /* Make html, body, and map all 100% high */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
     #map-title {
-      position: relative;
-      margin: 10px 0 0 50px;
-      display: inline-block;
+      position: absolute;
+      top: 10px;
+      left: 50px;
       background: #fff;
       border: 2px solid rgba(0,0,0,0.2);
       padding: 6px 8px;
@@ -34,8 +41,7 @@
 </head>
 
 <body>
-  <!-- Title and map containers -->
-  <div id="map-title">Houston Walking Locations</div>
+  <div id="map-title">FITHouston Walking Locations</div>
   <div id="map"></div>
 
   <script>
@@ -48,7 +54,7 @@
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
-    /* Example marker (replace or extend with your own data) */
+    /* Example marker */
     L.marker([29.756, -95.367]).addTo(map)
       .bindPopup("<strong>Discovery Green</strong><br>Example pop-up text.");
   </script>
