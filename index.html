@@ -63,15 +63,18 @@
     });
 
 // ---- RAIL LINES ----------------------------------
-  fetch("https://mycity2.houstontx.gov/pubgis02/rest/services/HoustonMap/Transportation/MapServer/11/query?where=1%3D1&outFields=*&outSR=4326&f=geojson")
+  fetch("railLines.geojson")
     .then(r => r.json())
     .then(data => {
       L.geoJSON(data, {
         style: { color: '#c9f200', weight: 4, opacity: 0.8 },
-        onEachFeature: (f, layer) =>
-          layer.bindPopup(`<strong>Rail line:</strong> ${f.properties.NAME || ''}`)
+        onEachFeature: (f, layer) => {
+        // NAME doesn’t exist in this dataset, so use something else (like Status or CFCC)
+          const label = f.properties.Status || f.properties.CFCC || "METRORail Line";
+          layer.bindPopup(`<strong>Rail line:</strong> ${label}`);
+        }
       }).addTo(railLayer);
-  })
+    })
   
 
 
