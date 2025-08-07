@@ -13,150 +13,197 @@
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
   <style>
-    html, body { height: 100%; margin:0; padding:0; }
+    html, body { height: 100%; margin: 0; padding: 0; }
     #map        { height: 100%; width: 100%; }
-    #map-title {
-      position: absolute; top:10px; left:50px;
-      background:#fff; border:2px solid rgba(0,0,0,0.2);
-      padding:6px 8px; font-family:Helvetica,Arial,sans-serif;
-      font-weight:bold; font-size:24px; z-index:800;
-    }
+    #map-title  { display: none; } /* removed the old title box */
 
-    /* ——— COLLAPSIBLE FILTER PANEL ——— */
+    /* ——— FILTER PANEL ——— */
     #filter-toggle {
-      position:absolute; top:10px; right:10px;
-      z-index:1000; padding:6px 12px;
-      background:#fff; border:1px solid #999;
-      cursor:pointer;
+      position: absolute; top: 10px; right: 10px;
+      z-index: 1000; padding: 6px 12px;
+      background: #fff; border: 1px solid #999;
+      cursor: pointer;
     }
     #filter-panel {
-      position:absolute; top:44px; right:10px;
-      width:220px; height:36px; /* collapsed */
-      overflow:hidden;
-      background:#fff; border:1px solid #999;
-      transition:height 0.3s ease; z-index:1000;
+      position: absolute; top: 44px; right: 10px;
+      width: 240px; height: 36px; /* collapsed */
+      overflow: hidden;
+      background: #fff; border: 1px solid #999;
+      transition: height 0.3s ease; z-index: 1000;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
     }
-    #filter-panel.expanded { height:200px; }
-    .filter-section { padding:8px; font-family:Arial,sans-serif; }
+    #filter-panel.expanded { height: 260px; }
+
+    .filter-section {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    .filter-section:last-child { border-bottom: none; }
+
     .filter-section > .header {
-      display:flex; align-items:center; justify-content:space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
     .options-list {
-      margin-top:8px; margin-left:16px;
-      display:none;
+      margin-top: 8px; margin-left: 16px;
+      display: none;
     }
-    .options-list.visible { display:block; }
-    .filter-section button { font-size:14px; }
+    .options-list.visible { display: block; }
+
+    .filter-section button { font-size: 14px; }
   </style>
 </head>
 <body>
-  <div id="map-title">FITHouston Walking & Transit</div>
+  <!-- no more map-title -->
   <div id="map"></div>
 
-  <!-- 1) Small toggle button -->
+  <!-- Filter UI -->
   <button id="filter-toggle">Filters</button>
-  <!-- 2) Collapsible panel -->
   <div id="filter-panel">
-    <div class="filter-section">
+    <!-- Walking Locations Section -->
+    <div class="filter-section" id="walk-section">
       <div class="header">
         <span>Walking Locations</span>
         <div>
-          <button id="section-expand">▶</button>
-          <button id="toggle-all">All</button>
+          <button id="expand-walk">▶</button>
+          <button id="all-walk">All</button>
         </div>
       </div>
-      <div id="walking-list" class="options-list">
-        <label><input type="checkbox" id="chk-current" checked> Current</label><br>
-        <label><input type="checkbox" id="chk-suggested" checked> Suggested</label>
+      <div id="list-walk" class="options-list">
+        <label><input type="checkbox" id="chk-loc" checked> Locations</label><br>
+        <label><input type="checkbox" id="chk-pot" checked> Potential locations</label>
+      </div>
+    </div>
+    <!-- Public Transit Section -->
+    <div class="filter-section" id="transit-section">
+      <div class="header">
+        <span>Public Transit</span>
+        <div>
+          <button id="expand-transit">▶</button>
+          <button id="all-transit">All</button>
+        </div>
+      </div>
+      <div id="list-transit" class="options-list">
+        <label><input type="checkbox" id="chk-rail" checked> Rail lines</label><br>
+        <label><input type="checkbox" id="chk-bus" checked> Bus routes</label>
       </div>
     </div>
   </div>
 
   <script>
     // —— PANEL INTERACTIONS ——
-    const panel        = document.getElementById('filter-panel');
-    const btnToggle    = document.getElementById('filter-toggle');
-    const btnExpand    = document.getElementById('section-expand');
-    const list         = document.getElementById('walking-list');
-    const chkCurrent   = document.getElementById('chk-current');
-    const chkSuggested = document.getElementById('chk-suggested');
-    const btnAll       = document.getElementById('toggle-all');
+    const panel         = document.getElementById('filter-panel');
+    const btnToggle     = document.getElementById('filter-toggle');
 
+    // Walking section controls
+    const btnExpandWalk = document.getElementById('expand-walk');
+    const btnAllWalk    = document.getElementById('all-walk');
+    const listWalk      = document.getElementById('list-walk');
+    const chkLoc        = document.getElementById('chk-loc');
+    const chkPot        = document.getElementById('chk-pot');
+
+    // Transit section controls
+    const btnExpandTrans  = document.getElementById('expand-transit');
+    const btnAllTrans     = document.getElementById('all-transit');
+    const listTransit     = document.getElementById('list-transit');
+    const chkRail         = document.getElementById('chk-rail');
+    const chkBus          = document.getElementById('chk-bus');
+
+    // Expand/collapse entire panel
     btnToggle.addEventListener('click', () => {
       panel.classList.toggle('expanded');
     });
-    btnExpand.addEventListener('click', () => {
-      list.classList.toggle('visible');
-      btnExpand.textContent = list.classList.contains('visible') ? '▼' : '▶';
+
+    // Walking expand/collapse
+    btnExpandWalk.addEventListener('click', () => {
+      listWalk.classList.toggle('visible');
+      btnExpandWalk.textContent = listWalk.classList.contains('visible') ? '▼' : '▶';
     });
-    btnAll.addEventListener('click', () => {
-      const allOn = chkCurrent.checked && chkSuggested.checked;
-      [chkCurrent, chkSuggested].forEach(cb => cb.checked = !allOn);
-      chkCurrent.dispatchEvent(new Event('change'));
-      chkSuggested.dispatchEvent(new Event('change'));
+    // Transit expand/collapse
+    btnExpandTrans.addEventListener('click', () => {
+      listTransit.classList.toggle('visible');
+      btnExpandTrans.textContent = listTransit.classList.contains('visible') ? '▼' : '▶';
+    });
+
+    // Master toggle Walking
+    btnAllWalk.addEventListener('click', () => {
+      const allOn = chkLoc.checked && chkPot.checked;
+      [chkLoc, chkPot].forEach(cb => cb.checked = !allOn);
+      chkLoc.dispatchEvent(new Event('change'));
+      chkPot.dispatchEvent(new Event('change'));
+    });
+    // Master toggle Transit
+    btnAllTrans.addEventListener('click', () => {
+      const allOn = chkRail.checked && chkBus.checked;
+      [chkRail, chkBus].forEach(cb => cb.checked = !allOn);
+      chkRail.dispatchEvent(new Event('change'));
+      chkBus.dispatchEvent(new Event('change'));
     });
 
     // —— YOUR EXISTING MAP CODE ——
     const map = L.map('map').setView([29.76, -95.37], 12);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom:19,
-      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+      maxZoom:19, attribution:'&copy; OpenStreetMap'
     }).addTo(map);
 
-    // Define your layer groups
-    const walkingLayer   = L.layerGroup();
-    const currentLayer   = L.layerGroup().addTo(map);
-    const suggestedLayer = L.layerGroup().addTo(map);
-    const busLayer       = L.layerGroup();
-    const railLayer      = L.layerGroup();
+    // Layer groups
+    const walkingLayer   = L.layerGroup().addTo(map);  // all walking points
+    const currentLayer   = L.layerGroup().addTo(map);  // “Locations”
+    const suggestedLayer = L.layerGroup().addTo(map);  // “Potential”
+    const busLayer       = L.layerGroup();             // Bus
+    const railLayer      = L.layerGroup();             // Rail
 
-    // Example walking marker
-    L.marker([29.756, -95.367]).addTo(walkingLayer)
-      .bindPopup("<strong>Discovery Green</strong><br>Example");
+    // Example walking markers (replace with your real data)
+    L.marker([29.756, -95.367]).addTo(currentLayer)
+      .bindPopup("Location: Discovery Green");
+    L.marker([29.760, -95.380]).addTo(suggestedLayer)
+      .bindPopup("Potential: New Park Trail");
 
-    // Bus routes fetch (unchanged)
-    fetch('https://www.gis.hctx.net/arcgishcpid/rest/services/Transportation/HC_Transportation/MapServer/8/query?where=1%3D1&outFields=RouteName&outSR=4326&f=geojson')
+    // Bus routes fetch
+    fetch('busRoutes.geojson')
       .then(r=>r.json())
-      .then(data=> {
+      .then(data=>{
         L.geoJSON(data, {
-          style:{color:'#0066cc',weight:2,opacity:0.7},
+          style:{color:'#0066cc', weight:2, opacity:0.7},
           onEachFeature:(f,layer)=>
-            layer.bindPopup(`<strong>Bus route:</strong> ${f.properties.RouteName||''}`)
+            layer.bindPopup(`<strong>Bus route:</strong> ${f.properties.RouteName}`)
         }).addTo(busLayer);
       });
 
-    // Rail lines fetch (local file)
+    // Rail lines fetch
     fetch('railLines.geojson')
       .then(r=>r.json())
       .then(data=>{
         L.geoJSON(data,{
-          style:{color:'#ec7a00',weight:4,opacity:0.8},
+          style:{color:'#ec7a00', weight:4, opacity:0.8},
           onEachFeature:(f,layer)=>{
-            const lbl = f.properties.Status || f.properties.CFCC || 'Rail';
+            const lbl = f.properties.Status || f.properties.CFCC;
             layer.bindPopup(`<strong>Rail line:</strong> ${lbl}`);
           }
         }).addTo(railLayer);
       });
 
     // —— WIRED TO FILTER PANEL ——
-    chkCurrent.addEventListener('change', e => {
-      e.target.checked ? map.addLayer(currentLayer) : map.removeLayer(currentLayer);
-    });
-    chkSuggested.addEventListener('change', e => {
-      e.target.checked ? map.addLayer(suggestedLayer) : map.removeLayer(suggestedLayer);
-    });
+    chkLoc.addEventListener('change', e =>
+      e.target.checked ? map.addLayer(currentLayer) : map.removeLayer(currentLayer)
+    );
+    chkPot.addEventListener('change', e =>
+      e.target.checked ? map.addLayer(suggestedLayer) : map.removeLayer(suggestedLayer)
+    );
+    chkRail.addEventListener('change', e =>
+      e.target.checked ? map.addLayer(railLayer) : map.removeLayer(railLayer)
+    );
+    chkBus.addEventListener('change', e =>
+      e.target.checked ? map.addLayer(busLayer) : map.removeLayer(busLayer)
+    );
 
-    // —— LEGACY LEAFLET CONTROLS (optional) ——
-    L.control.layers(null, {
-      'Walking (all)': walkingLayer,
-      'Current': currentLayer,
-      'Suggested': suggestedLayer,
-      'Bus routes': busLayer,
-      'Rail lines': railLayer
-    }, {collapsed:false}).addTo(map);
-
-    // Add walking points to current/suggested by default
-    walkingLayer.eachLayer(layer => currentLayer.addLayer(layer));
+    // By default both are on
+    chkLoc.dispatchEvent(new Event('change'));
+    chkPot.dispatchEvent(new Event('change'));
+    chkRail.dispatchEvent(new Event('change'));
+    chkBus.dispatchEvent(new Event('change'));
   </script>
 </body>
 </html>
