@@ -67,7 +67,7 @@
     .then(r => r.json())
     .then(data => {
       L.geoJSON(data, {
-        style: { color: '#cc0000', weight: 4, opacity: 0.8 },
+        style: { color: '#cc0000', weight: 20, opacity: 0.8 },
         onEachFeature: (f, layer) =>
           layer.bindPopup(`<strong>Rail line:</strong> ${f.properties.NAME || ''}`)
       }).addTo(railLayer);
