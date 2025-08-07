@@ -63,7 +63,7 @@
     });
 
 // ---- RAIL LINES ----------------------------------
-  fetch('https://mycity2.houstontx.gov/pubgis02/rest/services/HoustonMap/Transportation/MapServer/11/query?where=1%3D1&outFields=NAME&outSR=4326&f=geojson')
+  fetch('https://mycity2.houstontx.gov/pubgis02/rest/services/HoustonMap/Transportation/MapServer/11?f=pjson')
     .then(r => r.json())
     .then(data => {
       L.geoJSON(data, {
