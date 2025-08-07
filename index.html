@@ -13,78 +13,150 @@
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
           crossorigin=""></script>
   <style>
-    html, body { height: 100%; margin: 0; padding: 0; }
+    html, body { height: 100%; margin:0; padding:0; }
     #map        { height: 100%; width: 100%; }
     #map-title {
-      position: absolute;
-      top: 10px; left: 50px;
-      background: #fff;
-      border: 2px solid rgba(0,0,0,0.2);
-      padding: 6px 8px;
-      font-family: Helvetica, Arial, sans-serif;
-      font-weight: bold; font-size: 24px;
-      z-index: 800;
+      position: absolute; top:10px; left:50px;
+      background:#fff; border:2px solid rgba(0,0,0,0.2);
+      padding:6px 8px; font-family:Helvetica,Arial,sans-serif;
+      font-weight:bold; font-size:24px; z-index:800;
     }
+
+    /* ——— COLLAPSIBLE FILTER PANEL ——— */
+    #filter-toggle {
+      position:absolute; top:10px; right:10px;
+      z-index:1000; padding:6px 12px;
+      background:#fff; border:1px solid #999;
+      cursor:pointer;
+    }
+    #filter-panel {
+      position:absolute; top:44px; right:10px;
+      width:220px; height:36px; /* collapsed */
+      overflow:hidden;
+      background:#fff; border:1px solid #999;
+      transition:height 0.3s ease; z-index:1000;
+    }
+    #filter-panel.expanded { height:200px; }
+    .filter-section { padding:8px; font-family:Arial,sans-serif; }
+    .filter-section > .header {
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    .options-list {
+      margin-top:8px; margin-left:16px;
+      display:none;
+    }
+    .options-list.visible { display:block; }
+    .filter-section button { font-size:14px; }
   </style>
 </head>
 <body>
   <div id="map-title">FITHouston Walking & Transit</div>
   <div id="map"></div>
 
+  <!-- 1) Small toggle button -->
+  <button id="filter-toggle">Filters</button>
+  <!-- 2) Collapsible panel -->
+  <div id="filter-panel">
+    <div class="filter-section">
+      <div class="header">
+        <span>Walking Locations</span>
+        <div>
+          <button id="section-expand">▶</button>
+          <button id="toggle-all">All</button>
+        </div>
+      </div>
+      <div id="walking-list" class="options-list">
+        <label><input type="checkbox" id="chk-current" checked> Current</label><br>
+        <label><input type="checkbox" id="chk-suggested" checked> Suggested</label>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Initialize map centered on Houston
-    const map = L.map('map').setView([29.76, -95.37], 12);
+    // —— PANEL INTERACTIONS ——
+    const panel        = document.getElementById('filter-panel');
+    const btnToggle    = document.getElementById('filter-toggle');
+    const btnExpand    = document.getElementById('section-expand');
+    const list         = document.getElementById('walking-list');
+    const chkCurrent   = document.getElementById('chk-current');
+    const chkSuggested = document.getElementById('chk-suggested');
+    const btnAll       = document.getElementById('toggle-all');
 
-    // Base tiles
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
-
-    // Walking location marker (example)
-    const walkingLayer = L.layerGroup().addTo(map);
-    L.marker([29.756, -95.367]).addTo(walkingLayer)
-      .bindPopup("<strong>Discovery Green</strong><br>Example pop‑up text.");
-
-    // Bus routes layer (initially empty)
-    const busLayer = L.layerGroup();
-    // Rail lines layer (initially empty)
-    const railLayer = L.layerGroup();
-    
-    // ---- BUS ROUTES ----------------------------------
-  fetch('https://www.gis.hctx.net/arcgishcpid/rest/services/Transportation/HC_Transportation/MapServer/8/query?where=1=1&outFields=RouteName&f=geojson')
-    .then(r => r.json())
-    .then(data => {
-      L.geoJSON(data, {
-        style: { color: '#0066cc', weight: 2, opacity: 0.7 },
-        onEachFeature: (f, layer) =>
-          layer.bindPopup(`<strong>Bus route:</strong> ${f.properties.RouteName || ''}`)
-      }).addTo(busLayer);
+    btnToggle.addEventListener('click', () => {
+      panel.classList.toggle('expanded');
+    });
+    btnExpand.addEventListener('click', () => {
+      list.classList.toggle('visible');
+      btnExpand.textContent = list.classList.contains('visible') ? '▼' : '▶';
+    });
+    btnAll.addEventListener('click', () => {
+      const allOn = chkCurrent.checked && chkSuggested.checked;
+      [chkCurrent, chkSuggested].forEach(cb => cb.checked = !allOn);
+      chkCurrent.dispatchEvent(new Event('change'));
+      chkSuggested.dispatchEvent(new Event('change'));
     });
 
-// ---- RAIL LINES ----------------------------------
-  fetch("railLines.geojson")
-    .then(r => r.json())
-    .then(data => {
-      L.geoJSON(data, {
-        style: { color: '#c9f200', weight: 4, opacity: 0.8 },
-        onEachFeature: (f, layer) => {
-        // NAME doesn’t exist in this dataset, so use something else (like Status or CFCC)
-          const label = f.properties.Status || f.properties.CFCC || "METRORail Line";
-          layer.bindPopup(`<strong>Rail line:</strong> ${label}`);
-        }
-      }).addTo(railLayer);
-    })
-  
+    // —— YOUR EXISTING MAP CODE ——
+    const map = L.map('map').setView([29.76, -95.37], 12);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom:19,
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+    }).addTo(map);
 
+    // Define your layer groups
+    const walkingLayer   = L.layerGroup();
+    const currentLayer   = L.layerGroup().addTo(map);
+    const suggestedLayer = L.layerGroup().addTo(map);
+    const busLayer       = L.layerGroup();
+    const railLayer      = L.layerGroup();
 
-    // Add layers control so users can toggle overlays on/off
-    const overlayMaps = {
-      'Walking locations': walkingLayer,
+    // Example walking marker
+    L.marker([29.756, -95.367]).addTo(walkingLayer)
+      .bindPopup("<strong>Discovery Green</strong><br>Example");
+
+    // Bus routes fetch (unchanged)
+    fetch('https://www.gis.hctx.net/arcgishcpid/rest/services/Transportation/HC_Transportation/MapServer/8/query?where=1%3D1&outFields=RouteName&outSR=4326&f=geojson')
+      .then(r=>r.json())
+      .then(data=> {
+        L.geoJSON(data, {
+          style:{color:'#0066cc',weight:2,opacity:0.7},
+          onEachFeature:(f,layer)=>
+            layer.bindPopup(`<strong>Bus route:</strong> ${f.properties.RouteName||''}`)
+        }).addTo(busLayer);
+      });
+
+    // Rail lines fetch (local file)
+    fetch('railLines.geojson')
+      .then(r=>r.json())
+      .then(data=>{
+        L.geoJSON(data,{
+          style:{color:'#ec7a00',weight:4,opacity:0.8},
+          onEachFeature:(f,layer)=>{
+            const lbl = f.properties.Status || f.properties.CFCC || 'Rail';
+            layer.bindPopup(`<strong>Rail line:</strong> ${lbl}`);
+          }
+        }).addTo(railLayer);
+      });
+
+    // —— WIRED TO FILTER PANEL ——
+    chkCurrent.addEventListener('change', e => {
+      e.target.checked ? map.addLayer(currentLayer) : map.removeLayer(currentLayer);
+    });
+    chkSuggested.addEventListener('change', e => {
+      e.target.checked ? map.addLayer(suggestedLayer) : map.removeLayer(suggestedLayer);
+    });
+
+    // —— LEGACY LEAFLET CONTROLS (optional) ——
+    L.control.layers(null, {
+      'Walking (all)': walkingLayer,
+      'Current': currentLayer,
+      'Suggested': suggestedLayer,
       'Bus routes': busLayer,
       'Rail lines': railLayer
-    };
-    L.control.layers(null, overlayMaps, { collapsed: false }).addTo(map);
+    }, {collapsed:false}).addTo(map);
+
+    // Add walking points to current/suggested by default
+    walkingLayer.eachLayer(layer => currentLayer.addLayer(layer));
   </script>
 </body>
 </html>
